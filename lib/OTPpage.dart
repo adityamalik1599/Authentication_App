@@ -1,17 +1,17 @@
+import 'package:authentication_app/Confirmation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:authentication_app/WelcomeScreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class OTP extends StatefulWidget {
-  final String name;
-  final String email;
   final String number;
 
 
   OTP(
-      {Key key, @required this.name, @required this.email, @required this.number})
+      {Key key, @required this.number})
       : super(key: key);
 
   @override
@@ -23,12 +23,14 @@ class _OTPState extends State<OTP> {
   String smsCode;
   String verificationCode;
   FirebaseAuthException exception;
-  FirebaseFirestore _firestore=FirebaseFirestore.instance;
-
+  FirebaseFirestore _firestore= FirebaseFirestore.instance;
+  bool isLoading=false;
+  FirebaseAuth _auth=FirebaseAuth.instance;
 
   @override
   void initState() {
     _letsbegin();
+
     super.initState();
   }
 
@@ -61,11 +63,19 @@ class _OTPState extends State<OTP> {
                     labelText: 'Enter OTP',
                  ),
                  ),
+                  Visibility(
+                      visible: isLoading,
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      )
+                  ),
                    FlatButton(
                      child: Text('Verify'),
                          color: Colors.blueAccent,
                          onPressed: () async {
-                       SharedPreferences preferences=await SharedPreferences.getInstance();
+                           setState(() {
+                             isLoading = true;
+                           });
                         FocusScope.of(context).requestFocus(FocusNode());
                         if(_formstate.currentState.validate()) {
                           PhoneAuthCredential phoneAuthCredential = PhoneAuthProvider
@@ -75,20 +85,38 @@ class _OTPState extends State<OTP> {
                               .signInWithCredential(phoneAuthCredential);
                           User user = result.user;
                           if (user != null) {
-                         await  _firestore.collection('Users').doc(user.uid).set({
-                             'Name':widget.name,
-                             'Email':widget.email,
-                             'Number':widget.number
-                           });
-
-                             preferences.setString('Key', widget.email);
-                            Navigator.pushAndRemoveUntil(context,
-                              MaterialPageRoute(
-                                  builder: (context) => WelcomeScreen()),
-                                  (Route<dynamic> route) => false,
-                            );
+                            DocumentSnapshot documentSnapshot=await _firestore.collection('Users').doc(user.uid).get();
+                            if(documentSnapshot.exists==true) {
+                              setState(() {
+                                isLoading = false;
+                              });
+                              Navigator.pushAndRemoveUntil(context,
+                                MaterialPageRoute(builder: (context) =>
+                                    Confirmation(
+                                        nameOfPerson: null, emailadd: null, number: widget.number)),
+                                    (Route<dynamic> route) => false,
+                              );
+                            }
+                            else
+                            {
+                              setState(() {
+                                isLoading = false;
+                              });
+                              Navigator.pushAndRemoveUntil(context,
+                                  MaterialPageRoute(builder: (context) =>WelcomeScreen()),
+                                      (Route<dynamic> route) => false
+                              );
+                              User user=FirebaseAuth.instance.currentUser;
+                              DocumentSnapshot documentSnapshot= await _firestore.collection('Users').doc(user.uid).get();
+                              Map<String, dynamic> data = documentSnapshot.data();
+                              final SharedPreferences preferences=await SharedPreferences.getInstance();
+                              preferences.setString('Key',data['Email']);
+                            }
                           } else {
-                            print('Error');
+                            setState(() {
+                              isLoading = false;
+                            });
+                            Fluttertoast.showToast(msg:'Some Error Occured');
                           }
                         }
                        }
@@ -100,10 +128,9 @@ class _OTPState extends State<OTP> {
                  ),
                 );
             }
-            FirebaseAuth _auth=FirebaseAuth.instance;
+
       Future<void> _letsbegin() async
     {
-
     await _auth.verifyPhoneNumber(
     phoneNumber: '+91' + widget.number,
     timeout: Duration(seconds: 60),
@@ -111,24 +138,42 @@ class _OTPState extends State<OTP> {
     UserCredential result = await _auth.signInWithCredential(credential);
     User user = result.user;
     if (user != null) {
-      await  _firestore.collection('Users').doc(user.uid).set({
-        'Name':widget.name,
-        'Email':widget.email,
-        'Number':widget.number
+      setState(() {
+        isLoading = true;
       });
-    Navigator.pushAndRemoveUntil(context,
-    MaterialPageRoute(builder: (context) => WelcomeScreen()),
-    (Route<dynamic> route) => false,
-    );
+      DocumentSnapshot documentSnapshot=await _firestore.collection('Users').doc(user.uid).get();
+      if(documentSnapshot.exists!=true) {
+        setState(() {
+          isLoading = false;
+        });
+        Navigator.pushAndRemoveUntil(context,
+          MaterialPageRoute(builder: (context) =>
+              Confirmation(
+                  nameOfPerson: null, emailadd: null, number: widget.number)),
+              (Route<dynamic> route) => false,
+        );
+      }
+      else {
+        Navigator.pushAndRemoveUntil(context,
+            MaterialPageRoute(builder: (context) => WelcomeScreen()),
+                (Route<dynamic> route) => false
+        );
+
+        User user=FirebaseAuth.instance.currentUser;
+        DocumentSnapshot documentSnapshot= await _firestore.collection('Users').doc(user.uid).get();
+        Map<String, dynamic> data = documentSnapshot.data();
+        final SharedPreferences preferences=await SharedPreferences.getInstance();
+        preferences.setString('Key',data['Email']);
+      }
     }
     else {
-    print('Error');
+      Fluttertoast.showToast(msg:'Some Error Occured');
     }
     },
     verificationFailed: (FirebaseAuthException e) {
       exception=e;
     if (e.code == 'invalid-verification-code') {
-    print('error');
+      Fluttertoast.showToast(msg:'Invalid Verification Code');
     }
     },
     codeSent: (String verificationId, int resendToken) {
@@ -140,3 +185,4 @@ class _OTPState extends State<OTP> {
 );
 }
 }
+
