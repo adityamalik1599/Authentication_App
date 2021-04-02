@@ -1,6 +1,9 @@
+import 'package:authentication_app/AfterCart/AddressBook.dart';
+import 'package:authentication_app/AfterCart/AskingforAddress.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 import '../ProductPage.dart';
 
@@ -44,7 +47,7 @@ class _CartState extends State<Cart> {
                 backgroundColor: Colors.blue,
                 title: Text('Cart'),
               ),
-              body: ListView.builder(
+              body:  snapshot.data.docs.length==0?Center(child: Text('Your Cart is Empty!!!', style: TextStyle(fontSize: 24.0),)):ListView.builder(
                   itemCount: snapshot.data.docs.length,
                   itemBuilder: (BuildContext context, int index) {
                       return Padding(
@@ -56,33 +59,71 @@ class _CartState extends State<Cart> {
                              InkWell(
                                onTap: (){
                                 Navigator.push(context,   MaterialPageRoute(builder: (context) =>
-                                ProductPage(product_name: snapshot.data.docs[index].get('Name'),product_discountedPrice: snapshot.data.docs[index].get('Current Price'),ISBN: snapshot.data.docs[index].get('ISBN'))));
+                                ProductPage(product_name: snapshot.data.docs[index].get('Name'),product_discountedPrice: snapshot.data.docs[index].get('Current Price'),ISBN: snapshot.data.docs[index].get('ISBN'),imageURL: snapshot.data.docs[index].get('imageURL'),)));
                                   },
                                    child: ListTile(
                                     leading: Icon(Icons.book,
                                      size: 35.0,
                                     ),
                                      title: Text(snapshot.data.docs[index].get('Name'),
-                                     style: TextStyle(
-                                     fontWeight: FontWeight.bold
-                                      )
+                                       style: TextStyle(
+                                         fontWeight: FontWeight.bold
+                                       ),
                                      ),
                                       subtitle: Text(snapshot.data.docs[index].get('Quality')),
-                                       trailing: Text(snapshot.data.docs[index].get('Current Price'),
-                                       style: TextStyle(
-                                       fontWeight: FontWeight.w500,
-                                         fontSize: 16.0
-                                      ),
+                                       trailing: Text(snapshot.data.docs[index].get('Current Price'))
                                      ),
                                     ),
-                                   ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Padding(
+                                            padding: EdgeInsets.all(16.0),
+                                            child: FlatButton(
+                                                onPressed: () {
+                                                  int decrease=0;
+                                                  if (int.parse(snapshot.data.docs[index].get('Quantity')) > 1) {
+                                                     decrease=int.parse(snapshot.data.docs[index].get('Quantity'))-1;
+                                                    cart.doc(user.uid).collection('Cart').doc(snapshot.data.docs[index].get('ISBN')+snapshot.data.docs[index].get('Quality')).update({'Quantity': decrease.toString()});
+                                                     setState(() {
+                                                       total=total-int.parse(snapshot.data.docs[index].get('Current Price'));
+                                                     });
+                                                  }
+                                                },
+                                                color: Colors.blue,
+                                                child: Text('-')
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: EdgeInsets.all(2.0),
+                                              child: Text('Quantity:   ${snapshot.data.docs[index].get('Quantity')}')),
+                                          Padding(
+                                            padding: EdgeInsets.all(16.0),
+                                            child: FlatButton(
+                                                onPressed: (){
+                                                 if (int.parse(snapshot.data.docs[index].get('Quantity')) < 5) {
+                                                   int increase=0;
+                                                   increase=int.parse(snapshot.data.docs[index].get('Quantity'))+1;
+                                                   print(increase);
+                                                   cart.doc(user.uid).collection('Cart').doc(snapshot.data.docs[index].get('ISBN') + snapshot.data.docs[index].get('Quality')).update({'Quantity': increase.toString()});
+                                                   setState(() {
+                                                     total=total+int.parse(snapshot.data.docs[index].get('Current Price'));
+                                                   });
+                                                }
+                                                 },
+                                                color: Colors.blue,
+                                                child: Text('+')
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                   Padding(
                                    padding: EdgeInsets.only(left: 16.0, right: 16.0),
                                     child: FlatButton(
                                      onPressed: () async {
-                                       setState(() {
-                                         total=total-int.parse(snapshot.data.docs[index].get('Current Price'));
-                                       });
+                                         setState(() {
+                                           total = total - (int.parse(snapshot.data.docs[index].get('Current Price')) *int.parse(snapshot.data.docs[index].get('Quantity')));
+                                         });
                                       cart.doc(user.uid).collection('Cart').doc(snapshot.data.docs[index].get('ISBN')+snapshot.data.docs[index].get('Quality')).delete();
                                          },
                                       minWidth: double.infinity,
@@ -104,9 +145,28 @@ class _CartState extends State<Cart> {
                     title: Text('Total Amount'),
                     subtitle: Text(total.toString()),
                     trailing: FlatButton(
-                      onPressed: (){},
+                      onPressed: () async {
+                        QuerySnapshot addressAvailable = await FirebaseFirestore
+                            .instance
+                            .collection('Users').doc(user.uid).collection('Address Book').get();
+                        List<DocumentSnapshot> AddressDocument = addressAvailable.docs;
+                        if(total>100) {
+                          if (AddressDocument.length == 0)
+                            Navigator.push(context,
+                                MaterialPageRoute(builder: (context) =>
+                                    askingForAddress(total: total))
+                            );
+                          else
+                            Navigator.push(context,
+                                MaterialPageRoute(builder: (context) =>
+                                    AddressBook(total: total,))
+                            );
+                        }
+                        else
+                          Fluttertoast.showToast(msg: 'Total Cart Value must be greater than 100 for Ordering');
+                      },
                       color: Colors.blue,
-                      child: Text('CheckOut'),
+                      child: Text('Proceed'),
                     ),
                   ),
                 )
@@ -119,10 +179,11 @@ class _CartState extends State<Cart> {
     QuerySnapshot documentsAddedtoCart= await FirebaseFirestore.instance.collection('Users').doc(user.uid).collection('Cart').get();
     documentsAddedtoCart.docs.forEach((document) {
       Map<String, dynamic> data = document.data();
-      setState(() {
-        total=total+int.parse(data['Current Price']);
-        return total.toString();
-      });
+        setState(() {
+          total = total +
+              int.parse(data['Current Price']) * int.parse(data['Quantity']);
+          return total.toString();
+        });
     });
   }
 }

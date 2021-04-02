@@ -37,7 +37,8 @@ class _GridItemListState extends State<GridItemList> {
                   return GridPageSingleProduct(product_name: snapshot.data.docs[index].get('Name'),
                       product_discountedPrice: snapshot.data.docs[index].get('Discounted Price'),
                       product_price: snapshot.data.docs[index].get('Price'),
-                  ISBN: snapshot.data.docs[index].get('ISBN'));
+                  ISBN: snapshot.data.docs[index].get('ISBN'),
+                  imageURL: snapshot.data.docs[index].get('imageURL'),);
                 });
     }
         }

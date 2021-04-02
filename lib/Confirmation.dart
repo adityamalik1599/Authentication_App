@@ -10,8 +10,9 @@ class Confirmation extends StatefulWidget {
   String nameOfPerson;
   String emailadd;
   String number;
+  String isVerifiedThrough;
   Confirmation(
-      {Key key, @required this.nameOfPerson, @required this.emailadd, @required this.number})
+      {Key key, @required this.nameOfPerson, @required this.emailadd, @required this.number,@required this.isVerifiedThrough})
       : super(key: key);
 
   @override
@@ -104,7 +105,7 @@ class _ConfirmationState extends State<Confirmation> {
                     child: Text('Register'),
                     onPressed: () async{
                       FocusScope.of(context).requestFocus(FocusNode());
-                      FirebaseFirestore _firestore=FirebaseFirestore.instance;
+                      FirebaseFirestore _firestore= FirebaseFirestore.instance;
                       User user = FirebaseAuth.instance.currentUser;
                       if (_form.currentState.validate()) {
                         setState(() {
@@ -127,7 +128,8 @@ class _ConfirmationState extends State<Confirmation> {
                               .set({
                             'Name': widget.nameOfPerson,
                             'Email': widget.emailadd,
-                            'Number': widget.number
+                            'Number': widget.number,
+                            'IsVerifiedThrough':widget.isVerifiedThrough
                           });
                             SharedPreferences preferences=await SharedPreferences.getInstance();
                               preferences.setString('Key', widget.emailadd);

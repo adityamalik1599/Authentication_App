@@ -1,14 +1,16 @@
 import 'package:authentication_app/ProductPage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class GridPageSingleProduct extends StatelessWidget {
    String product_name;
    String product_discountedPrice;
    String product_price;
    String ISBN;
+   String imageURL;
  GridPageSingleProduct(
-      {Key key, @required this.product_name, @required this.product_discountedPrice,  this.product_price,@required this.ISBN})
+      {Key key, @required this.product_name, @required this.product_discountedPrice,  this.product_price,@required this.ISBN, @required this.imageURL})
       : super(key: key);
 
   @override
@@ -18,15 +20,21 @@ class GridPageSingleProduct extends StatelessWidget {
       child: InkWell(
         onTap: (){
           Navigator.push(context,  MaterialPageRoute(builder: (context) =>
-         ProductPage(product_discountedPrice: product_discountedPrice,product_name: product_name,product_price: product_price,ISBN: ISBN)));
+         ProductPage(product_discountedPrice: product_discountedPrice,product_name: product_name,product_price: product_price,ISBN: ISBN,imageURL: imageURL)));
         },
         child: Card(
           color: Colors.grey,
           child: GridTile(
             child: Padding(
               padding: EdgeInsets.only(bottom: 16.0),
-              child: Icon(Icons.book,
-              size: 48.0,),
+              child: Hero(
+                tag: ISBN,
+                child: CachedNetworkImage(
+                  imageUrl: imageURL,
+                  placeholder: (context,url)=>Center(child: Container(height: 20.0, width: 20.0,child: CircularProgressIndicator())),
+                  errorWidget: (context,url,error)=>Icon(Icons.error),
+                ),
+              ),
             ),
             footer: Container(
                 color: Colors.blue,

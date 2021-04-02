@@ -200,7 +200,7 @@ class _PhoneVerificationState extends State<PhoneVerification> {
             MaterialPageRoute(builder: (context) =>
                 Confirmation(nameOfPerson: user.displayName,
                     emailadd: user.email,
-                    number: user.phoneNumber)),
+                    number: user.phoneNumber,isVerifiedThrough: 'Google Email',)),
                 (Route<dynamic> route) => false,
           );
         }

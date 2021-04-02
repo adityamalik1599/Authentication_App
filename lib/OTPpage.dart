@@ -93,7 +93,7 @@ class _OTPState extends State<OTP> {
                               Navigator.pushAndRemoveUntil(context,
                                 MaterialPageRoute(builder: (context) =>
                                     Confirmation(
-                                        nameOfPerson: null, emailadd: null, number: widget.number)),
+                                        nameOfPerson: null, emailadd: null, number: widget.number,isVerifiedThrough: 'Mobile Number',)),
                                     (Route<dynamic> route) => false,
                               );
                             }
@@ -149,7 +149,7 @@ class _OTPState extends State<OTP> {
         Navigator.pushAndRemoveUntil(context,
           MaterialPageRoute(builder: (context) =>
               Confirmation(
-                  nameOfPerson: null, emailadd: null, number: widget.number)),
+                  nameOfPerson: null, emailadd: null, number: widget.number,isVerifiedThrough: 'Mobile Number',)),
               (Route<dynamic> route) => false,
         );
       }
